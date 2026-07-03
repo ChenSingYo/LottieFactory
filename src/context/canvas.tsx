@@ -18,12 +18,27 @@ const LABEL_GAP_Y = 7; // CSS px between the label baseline and the frame
 const LABEL_MIN_WIDTH = 24; // CSS px the label may occupy on a tiny frame
 const LABEL_FONT_URL = new URL('@/assets/fonts/Inter-VariableFont_opsz,wght.ttf', import.meta.url).toString();
 
+// Playback rate multipliers cycled by the speed control (1 = native speed).
+const SPEEDS = [0.25, 0.5, 1, 2];
+
+// Canvas backdrops cycled by the background control. The canvas clears to
+// transparent, so this shows through. `undefined` = the theme's default
+// (`bg-canvas`); the rest are inline CSS `background` values.
+const BACKGROUNDS: (string | undefined)[] = [
+  undefined,
+  "hsl(0 0% 96%)",
+  "hsl(0 0% 4%)",
+  "repeating-conic-gradient(hsl(240 5% 16%) 0% 25%, hsl(240 5% 9%) 0% 50%) 0 0 / 20px 20px",
+];
+
 const CanvasContext = createContext<{
   zoom: Accessor<number>;
   playing: Accessor<boolean>;
   currentFrame: Accessor<number>;
   totalFrames: Accessor<number>;
   fps: Accessor<number>;
+  speed: Accessor<number>;
+  background: Accessor<string | undefined>;
   slots: Accessor<AnimationSlot[]>;
   controls: Resource<Record<string, ControlMeta>>;
   setScalarSlot(id: string, value: number): void;
@@ -33,6 +48,9 @@ const CanvasContext = createContext<{
   commitSource(): void;
   togglePlayback(): void;
   seek(frame: number): void;
+  stepFrame(delta: number): void;
+  cycleSpeed(): void;
+  cycleBackground(): void;
   zoomByCentered(factor: number): void;
   resetCamera(): void;
 }>();
@@ -55,6 +73,8 @@ export function CanvasProvider(props: { children: JSX.Element }) {
   const [searchParams] = useSearchParams();
   const [playing, setPlaying] = createSignal(false);
   const [currentFrame, setCurrentFrame] = createSignal(0);
+  const [speed, setSpeed] = createSignal(1);
+  const [background, setBackground] = createSignal<string | undefined>(undefined);
   const [canvasKit] = createResource(getCanvasKit);
   const [textOverrides, setTextOverrides] = createSignal<Record<string, string>>({});
   const currentScene = createMemo(() => {
@@ -278,6 +298,20 @@ export function CanvasProvider(props: { children: JSX.Element }) {
     dirty = true;
   };
 
+  // Pause and nudge the playhead by whole frames (shared by the ←/→ keys and
+  // the playback bar's step buttons).
+  const stepFrame = (delta: number) => {
+    setPlaying(false);
+    const last = Math.max(0, totalFrames() - 1);
+    seek(Math.min(Math.round(currentFrame()) + delta, last));
+  };
+
+  const cycleSpeed = () =>
+    setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length]);
+
+  const cycleBackground = () =>
+    setBackground((b) => BACKGROUNDS[(BACKGROUNDS.indexOf(b) + 1) % BACKGROUNDS.length]);
+
   const resize = () => {
     const dpr = window.devicePixelRatio || 1;
     const width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
@@ -377,9 +411,7 @@ export function CanvasProvider(props: { children: JSX.Element }) {
     } as Record<string, number>)[e.key];
     if (step === undefined) return;
     e.preventDefault();
-    setPlaying(false);
-    const last = Math.max(0, totalFrames() - 1);
-    seek(Math.min(Math.round(currentFrame()) + step, last));
+    stepFrame(step);
   };
 
   // Accept a Lottie file dragged onto the canvas, but only when files are being
@@ -434,7 +466,7 @@ export function CanvasProvider(props: { children: JSX.Element }) {
     if (playing() && totalFrames() > 0) {
       if (!lastTs) lastTs = ts; // first tick after play(): no elapsed time yet
       const dt = (ts - lastTs) / 1000;
-      setCurrentFrame((currentFrame() + dt * fps()) % totalFrames());
+      setCurrentFrame((currentFrame() + dt * fps() * speed()) % totalFrames());
       lastTs = ts;
       dirty = true;
     }
@@ -536,6 +568,8 @@ export function CanvasProvider(props: { children: JSX.Element }) {
         currentFrame,
         totalFrames,
         fps,
+        speed,
+        background,
         slots,
         controls,
         setScalarSlot,
@@ -545,10 +579,13 @@ export function CanvasProvider(props: { children: JSX.Element }) {
         commitSource,
         togglePlayback,
         seek,
+        stepFrame,
+        cycleSpeed,
+        cycleBackground,
         zoomByCentered,
         resetCamera,
       }}>
-      <div class="relative h-screen w-screen bg-canvas">
+      <div class="relative h-screen w-screen bg-canvas" style={background() ? { background: background() } : undefined}>
         <canvas ref={canvas} id="main-canvas" class="block h-full w-full" />
         {props.children}
       </div>

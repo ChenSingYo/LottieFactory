@@ -28,7 +28,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 export function SidebarRight() {
-  const { slots, zoom, controls, setScalarSlot, setColorSlot, setVec2Slot, setTextSlot, commitSource, zoomByCentered, resetCamera } = useCanvas();
+  const { slots, zoom, background, controls, setScalarSlot, setColorSlot, setVec2Slot, setTextSlot, commitSource, zoomByCentered, resetCamera, cycleBackground } = useCanvas();
   const params = useParams();
   const { findProject } = useScenes();
   const { controlsExpanded } = useUI();
@@ -53,29 +53,38 @@ export function SidebarRight() {
       }}
     >
       <div class="flex items-center justify-between h-12 px-3 pl-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger class="flex items-center text-muted-foreground hover:text-foreground">
-            <span class="text-xxs">
-              {Math.round(zoom() * 100)}%
-            </span>
-            <Icon name="chevron-down" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={() => zoomByCentered(1.2)}>
-              Zoom in
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => zoomByCentered(1 / 1.2)}>
-              Zoom out
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => zoomByCentered(1 / zoom())}>
-              Zoom to 100%
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => resetCamera()}>
-              Zoom to fit
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div class="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger class="flex items-center text-muted-foreground hover:text-foreground">
+              <span class="text-xxs">
+                {Math.round(zoom() * 100)}%
+              </span>
+              <Icon name="chevron-down" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => zoomByCentered(1.2)}>
+                Zoom in
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => zoomByCentered(1 / 1.2)}>
+                Zoom out
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => zoomByCentered(1 / zoom())}>
+                Zoom to 100%
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => resetCamera()}>
+                Zoom to fit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button
+            onClick={cycleBackground}
+            title="Cycle canvas background"
+            aria-label="Cycle canvas background"
+            class="size-4 rounded-sm border border-border"
+            style={{ background: background() ?? "var(--canvas)" }}
+          />
+        </div>
         <Button onClick={handleExport}>
           Export
         </Button>
