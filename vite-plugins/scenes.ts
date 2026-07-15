@@ -403,7 +403,10 @@ export function scenesPlugin(): Plugin {
         } catch {
           return;
         }
-        if (selfWrites.get(file) === content) return; // echo of our own save — ignore
+        if (selfWrites.get(file) === content) {
+          selfWrites.delete(file);
+          return; // echo of our own save — ignore
+        }
         const rel = path.relative(projectsDir, file).split(path.sep).join("/");
         server.ws.send({ type: "custom", event: "scene:source", data: { lottie: `/projects/${rel}` } });
       });

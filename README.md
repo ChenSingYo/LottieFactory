@@ -117,7 +117,7 @@ view.playAnimation()
 ### Flutter
 ```yaml
 dependencies:
-  lottie: ^latest
+  lottie: ^1.0.0
 ```
 
 ```dart
